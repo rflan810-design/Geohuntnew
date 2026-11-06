@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Geometry Scavenger Hunt</title>
+<style>
+:root{--bg:#fff3d6;--ink:#2b2b2b;--card:#ffffff;--org:#ed7d31;--grn:#2e8b2e;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1d2b1d;--ink:#f6f6f6;--card:#2c3d2c}}
+:root[data-theme="dark"]{--bg:#1d2b1d;--ink:#f6f6f6;--card:#2c3d2c}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:"Chalkboard SE","Comic Sans MS","Trebuchet MS",sans-serif;display:flex;flex-direction:column;overflow:hidden}
+#top{display:flex;align-items:center;gap:10px;padding:10px 12px}
+.pill{background:var(--org);color:#fff;border-radius:16px;padding:8px 14px;font-size:clamp(18px,3vw,28px);font-weight:700;white-space:nowrap}
+#clue{flex:1;background:var(--card);border:4px solid var(--org);border-radius:20px;padding:8px 14px;font-size:clamp(18px,3.2vw,32px);font-weight:700;text-align:center}
+#spk,#vc{border:0;background:#4472c4;color:#fff;border-radius:50%;width:56px;height:56px;font-size:28px;cursor:pointer;flex:none}
+#stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:0 10px}
+#stage svg{max-width:100%;max-height:100%;border-radius:20px;border:4px solid var(--org);background:#9dc3e6;touch-action:manipulation}
+.h{stroke:#222;stroke-width:3;cursor:pointer}
+#stage svg *{cursor:pointer}
+.hint{animation:pulse .8s infinite}
+@keyframes pulse{50%{stroke:#ff0;stroke-width:10}}
+.wig{animation:wig .4s}
+@keyframes wig{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+#bar{display:flex;justify-content:center;gap:14px;padding:12px;min-height:76px}
+button.big{border:0;border-radius:24px;background:var(--grn);color:#fff;font:inherit;font-weight:700;font-size:clamp(22px,4vw,34px);padding:12px 28px;min-width:96px;min-height:64px;cursor:pointer;box-shadow:0 5px 0 rgba(0,0,0,.25)}
+button.big:active{transform:translateY(3px);box-shadow:0 2px 0 rgba(0,0,0,.25)}
+button.big.ch{background:var(--org);min-width:110px;font-size:clamp(28px,6vw,48px)}
+button.big.no{opacity:.35}
+.ov{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:5;padding:16px}
+.ov.on{display:flex}
+.card{background:var(--card);border-radius:32px;border:6px solid var(--grn);padding:24px;max-width:520px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px}
+.card h1{margin:0;font-size:clamp(30px,6vw,52px);color:var(--grn)}
+.card p{margin:0;font-size:clamp(18px,3.4vw,28px)}
+.card svg{width:min(34vw,160px);height:auto;animation:bob 1s infinite alternate}
+@keyframes bob{to{transform:translateY(-10px) rotate(4deg)}}
+#toast{position:fixed;left:50%;top:22%;transform:translateX(-50%);background:#ffd966;color:#333;border:5px solid var(--org);border-radius:24px;padding:12px 24px;font-size:clamp(24px,5vw,40px);font-weight:700;display:none;z-index:6}
+.cf{position:fixed;top:-40px;font-size:34px;z-index:7;animation:fall 2.2s linear forwards;pointer-events:none}
+@keyframes fall{to{transform:translateY(110vh) rotate(360deg)}}
+#rs{position:fixed;left:calc(12px + env(safe-area-inset-left,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:4;border:0;border-radius:20px;background:#4472c4;color:#fff;font:inherit;font-weight:700;font-size:clamp(16px,2.6vw,22px);padding:10px 16px;min-height:48px;cursor:pointer;box-shadow:0 4px 0 rgba(0,0,0,.25)}
+#title{background:var(--bg);z-index:9}
+#title .card{border-color:var(--org)}
+</style>
+</head>
+<body>
+<div id="top"><div class="pill" id="score">⭐ 0</div><div id="clue"></div><button id="spk" aria-label="Read aloud">🔊</button></div>
+<div id="stage"></div>
+<div id="bar"></div>
+<button id="rs" aria-label="Start over">↻ Reset</button>
+<div id="toast"></div>
+<div class="ov on" id="title"><div class="card"><h1>Geometry Scavenger Hunt</h1><p>Tap the picture to find the shape in the clue. Are you a Shape Master?</p><button class="big" id="go">Start ▶</button></div></div>
+<div class="ov" id="win"><div class="card"><h1>🎉 Correct! Great job!</h1><div id="ic"></div><p id="why"></p><button class="big" id="more">Find more shapes! ▶</button></div></div>
+<div class="ov" id="end"><div class="card"><h1>🏆 Congratulations!</h1><p>You found all the shapes! You are a Shape Master!</p><p id="fin" style="font-size:40px"></p><button class="big" id="again">Play again ↻</button></div></div>
+<script>
+const $=id=>document.getElementById(id);
+const poly=(n,cx,cy,r,rot=-90)=>Array.from({length:n},(_,i)=>{const a=(rot+360*i/n)*Math.PI/180;return (cx+r*Math.cos(a)).toFixed(1)+','+(cy+r*Math.sin(a)).toFixed(1)}).join(' ');
+const starP=(x,y,w,h)=>{const cx=x+w/2,cy=y+h/2;return Array.from({length:10},(_,i)=>{const a=(-90+36*i)*Math.PI/180,k=i%2?.42:1;return (cx+k*w/2*Math.cos(a)).toFixed(1)+','+(cy+k*h/2*Math.sin(a)).toFixed(1)}).join(' ')};
+const T=t=>t?` data-t="${t}"`:'';
+const R=(x,y,w,h,f,t)=>`<rect class="h" x="${x}" y="${y}" width="${w}" height="${h}" fill="${f}"${T(t)}/>`;
+const C=(x,y,r,f,t)=>`<circle class="h" cx="${x}" cy="${y}" r="${r}" fill="${f}"${T(t)}/>`;
+const E=(x,y,rx,ry,f,t)=>`<ellipse class="h" cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="${f}"${T(t)}/>`;
+const P=(p,f,t)=>`<polygon class="h" points="${p}" fill="${f}"${T(t)}/>`;
+const SC={
+house:R(0,0,1200,500,'#9dc3e6')+R(0,500,1200,175,'#a9d18e')+P('480,522 570,522 650,522 700,675 480,675','#555')+
+ R(325,94,529,138,'#7f7f7f')+R(546,25,69,70,'#c0392b')+P('163,232 318,74 474,232','#fff2b0','triangle')+P('691,232 846,74 1002,232','#fff2b0','triangle')+
+ R(197,232,239,290,'#fff2b0')+R(726,232,239,290,'#fff2b0')+R(436,232,290,290,'#ede8c8')+
+ C(316,170,40,'#dce6f5','circle')+C(845,163,40,'#dce6f5','circle')+R(260,298,108,154,'#dce6f5')+R(792,298,108,154,'#dce6f5')+
+ R(527,318,125,202,'#1f6f8b')+E(588,414,46,81,'#dce6f5')+C(98,488,48,'#548235','circle')+C(1072,488,48,'#548235','circle'),
+bus:R(0,0,1200,423,'#bdd7ee')+R(0,405,1200,270,'#3a3a3a')+R(205,153,753,134,'#ffd966')+R(205,288,753,134,'#ffd966')+R(958,288,137,134,'#ffd966')+
+ [241,343,445,546,648].map(x=>R(x,175,87,88,'#4472c4')).join('')+R(770,175,87,232,'#4472c4')+R(857,175,87,232,'#4472c4')+
+ P('958,175 1044,288 958,288','#4472c4','triangle')+`<text x="400" y="310" font-size="22" font-weight="700" fill="#222">SCHOOL BUS</text>`+
+ C(316,407,52,'#222','circle')+C(1027,407,52,'#222','circle')+P(poly(6,316,407,28,0),'#cfcfcf','hexagon')+P(poly(6,1027,407,28,0),'#cfcfcf','hexagon')+
+ P(poly(8,688,300,28,-67.5),'#e5252a','octagon'),
+boat:R(0,0,1200,425,'#bdd7ee')+R(0,403,1200,272,'#4472c4')+
+ P('402,336 528,336 528,238','#ffe699')+R(528,233,105,105,'#ffe699','square')+P('528,135 630,233 528,233','#ffe699')+
+ P('815,80 645,340 885,340','#ffe699')+`<line x1="815" y1="80" x2="815" y2="340" stroke="#222" stroke-width="3"/>`+
+ P('400,361 660,361 530,472','#ff0000')+P('660,361 900,361 770,472 530,472','#ff0000','parallelogram'),
+castle:R(0,0,1200,520,'#9dc3e6')+R(0,351,1200,324,'#548235')+
+ [[130,60,110],[60,95,80],[1010,80,100],[1090,60,80]].map(([x,y,w])=>E(x+w/2,y+25,w/2,28,'#fff')).join('')+
+ R(162,349,226,226,'#f4b183')+R(810,363,226,210,'#f4b183')+R(388,321,422,254,'#f4b183')+
+ [176,227,283,335].map(x=>R(x,305,36,44,'#7030a0')).join('')+[822,872,921,973].map(x=>R(x,318,36,44,'#7030a0')).join('')+
+ [396,446,500,550,601,655,709,762].map(x=>R(x,280,37,44,'#7030a0')).join('')+R(489,174,213,144,'#f4b183')+
+ P('463,180 596,66 729,180','#7030a0')+C(596,44,18,'#ffd966')+P('610,10 690,18 690,40 610,34','#e5252a')+
+ E(274,426,45,40,'#dce6f5')+E(922,426,45,40,'#dce6f5')+C(595,392,58,'#dce6f5')+P(starP(558,360,75,66),'#d6246e','star')+
+ P('576,468 621,468 641,488 641,573 556,573 556,488','#ffd966','hexagon'),
+forest:(()=>{const tr=[[745,154,83,150],[103,184,82,122],[246,119,74,224],[1094,108,95,238],[663,184,83,188],[397,152,86,260],[851,191,153,238],[157,213,107,260],[504,225,144,330],[3,290,147,302],[931,166,175,433],[685,321,224,311],[225,281,234,358]];
+ const cl=['#4a7c2f','#6aa84f','#38761d','#93c47d'];
+ const st=[[106,53,39,39],[45,191,54,40],[402,65,39,34],[683,44,39,39],[564,119,36,35],[881,68,39,31],[184,124,43,33],[16,18,29,26],[488,216,42,38],[1036,176,36,26],[1010,57,54,39],[557,2,29,35],[721,140,46,35],[168,14,43,42],[293,11,39,42],[1,84,39,35],[334,227,31,28],[351,162,34,40],[850,220,46,35],[1147,26,46,35]];
+ return R(0,0,1200,278,'#1f3864')+R(0,278,1200,397,'#a9d18e')+C(825,58,41,'#fce4d6')+
+ tr.map(([x,y,w,h],i)=>P(`${x+w/2},${y} ${x+w},${y+h} ${x},${y+h}`,cl[i%4])).join('')+st.map(([x,y,w,h])=>P(starP(x,y,w,h),'#e6a817')).join('')})()
+};
+const IC={circle:'<circle cx="50" cy="50" r="42" fill="#548235"/>',triangle:'<polygon points="50,8 94,88 6,88" fill="#f4b183"/>',octagon:`<polygon points="${poly(8,50,50,44,-67.5)}" fill="#e5252a"/>`,hexagon:`<polygon points="${poly(6,50,50,44,0)}" fill="#7030a0"/>`,para:'<polygon points="30,25 95,25 70,75 5,75" fill="#ff5050"/>',square:'<rect x="12" y="12" width="76" height="76" fill="#ffd966"/>',star:`<polygon points="${starP(6,6,88,84)}" fill="#d6246e"/>`};
+const Q=[
+{s:'house',say:'Here is your house! What shapes can you find?'},
+{s:'house',q:'Can you find a circle?',k:'circle',ok:'A circle is round, with no corners.',ic:'circle'},
+{s:'house',q:'Can you find a triangle?',k:'triangle',ok:'A triangle has 3 sides and 3 corners.',ic:'triangle'},
+{s:'bus',say:'The bus is passing by! Can you find the shapes?'},
+{s:'bus',q:'Can you find a shape with 8 sides?',k:'octagon',ok:'An octagon has 8 sides!',ic:'octagon'},
+{s:'bus',q:'Can you find a shape with 6 sides?',k:'hexagon',ok:'A hexagon has 6 sides!',ic:'hexagon'},
+{s:'bus',q:'Can you find a shape with 3 corners?',k:'triangle',ok:'Triangles have 3 corners!',ic:'triangle'},
+{s:'boat',say:'You see a boat sailing by! What shapes can you see?'},
+{s:'boat',q:'Can you find the parallelogram?',k:'parallelogram',ok:'A parallelogram has 2 sets of parallel sides that never touch!',ic:'para'},
+{s:'boat',q:'Can you find the shape with four equal sides?',k:'square',ok:'A square has 4 equal sides!',ic:'square'},
+{s:'castle',say:'You found a castle! What shapes can you see?'},
+{s:'castle',q:'Can you find a shape that has five points?',k:'star',ok:'A star has five points!',ic:'star'},
+{s:'castle',q:'Can you find a shape that has six sides?',k:'hexagon',ok:'This shape has 6 sides. It is a hexagon!',ic:'hexagon'},
+{s:'forest',say:'It’s the end of the day and you found a forest. What can you see?'},
+{s:'forest',q:'How many different types of shapes can you see?',mc:[3,4,5],a:3,ok:'There are 3 different types of shapes in the forest: triangles, stars and a circle.',ic:'triangle'},
+{s:'forest',q:'How many stars can you find?',mc:[15,18,20],a:20,ok:'There are 20 stars in the sky!',ic:'star'}
+];
+let i=0,score=0,wrong=0,lock=false,cur=null;
+let vi=-1,VO=null;try{speechSynthesis.getVoices()}catch(e){}const vs=()=>{try{return speechSynthesis.getVoices().filter(v=>/^en/i.test(v.lang))}catch(e){return[]}};
+const say=t=>{try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.rate=.85;u.pitch=1.1;if(!VO){const l=vs();if(l.length){const N=['samantha','karen','moira','tessa','fiona','victoria','allison','ava','susan','zira','hazel','jenny','aria','libby','serena','kate','joanna','salli','ivy','kendra','kimberly'];let f=-1;for(const n of N){f=l.findIndex(x=>x.name.toLowerCase().includes(n));if(f>=0)break}if(f<0)f=l.findIndex(x=>/female/i.test(x.name));VO=l[f>=0?f:0]}}if(VO){u.voice=VO;u.lang=VO.lang}else u.lang='en-US';speechSynthesis.speak(u)}catch(e){}};
+const toast=t=>{const e=$('toast');e.textContent=t;e.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>e.style.display='none',1400)};
+const confetti=()=>{for(let n=0;n<26;n++){const s=document.createElement('span');s.className='cf';s.textContent=['⭐','🎉','✨','🔷'][n%4];s.style.left=Math.random()*100+'vw';s.style.animationDelay=Math.random()*.6+'s';document.body.appendChild(s);setTimeout(()=>s.remove(),3200)}};
+function show(){
+ cur=Q[i];wrong=0;lock=false;
+ $('stage').innerHTML=`<svg viewBox="0 0 1200 675" preserveAspectRatio="xMidYMid meet">${SC[cur.s]}</svg>`;
+ $('score').textContent='⭐ '+score;
+ const t=cur.say||cur.q;$('clue').textContent=t;say(t);
+ const bar=$('bar');bar.innerHTML='';
+ if(cur.say){bar.innerHTML='<button class="big" id="nx">Let’s look! ▶</button>';$('nx').onclick=()=>{i++;show()}}
+ else if(cur.mc){cur.mc.forEach(n=>{const b=document.createElement('button');b.className='big ch';b.textContent=n;b.onclick=()=>{if(n===cur.a)win();else{b.classList.add('no','wig');b.disabled=true;oops()}};bar.appendChild(b)})}
+}
+function oops(){wrong++;toast('Good try! Try again!');say('Good try! Try again!');
+ if(wrong>=2&&cur.k)document.querySelectorAll(`#stage [data-t~="${cur.k}"]`).forEach(e=>e.classList.add('hint'))}
+function win(){if(lock)return;lock=true;score++;$('score').textContent='⭐ '+score;
+ $('ic').innerHTML=`<svg viewBox="0 0 100 100" style="stroke:#222;stroke-width:3">${IC[cur.ic]}</svg>`;
+ $('why').textContent=cur.ok;$('win').classList.add('on');confetti();say('Correct! Great job! '+cur.ok)}
+$('stage').addEventListener('click',e=>{
+ if(!cur||!cur.k||lock||!e.target.closest('svg'))return;
+ const el=e.target.closest('[data-t]');
+ if(el&&el.dataset.t.split(' ').includes(cur.k))win();
+ else{e.target.classList.remove('wig');void e.target.getBoundingClientRect();oops()}});
+$('more').onclick=()=>{$('win').classList.remove('on');i++;if(i>=Q.length)finish();else show()};
+function finish(){cur=null;$('fin').textContent='⭐'.repeat(Math.min(score,11));$('end').classList.add('on');confetti();say('Congratulations! You found all the shapes!')}
+$('go').onclick=()=>{$('title').classList.remove('on');i=0;score=0;show()};
+$('again').onclick=()=>{$('end').classList.remove('on');i=0;score=0;show()};
+$('rs').onclick=()=>{try{speechSynthesis.cancel()}catch(e){}['win','end'].forEach(k=>$(k).classList.remove('on'));i=0;score=0;show()};
+$('spk').onclick=()=>cur&&say(cur.say||cur.q);
+</script>
+</body>
+</html>
